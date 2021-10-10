@@ -7,7 +7,7 @@ var jwt = require('jsonwebtoken');
 
 const JWT_SECRET = 'farishisagoodboy';
 
-//Creating a user using : POST "/api/auth":
+//Creating a user using : POST "/api/auth/createuser":
 router.post(
   "/createuser",
   [
@@ -53,5 +53,47 @@ router.post(
     }
   }
 );
+
+//Creating a user using : POST "/api/auth/login":
+router.post(
+  "/login",
+  [
+    body("email", "Enter a valid email").isEmail(),
+    body("password", "Password Cannot be blank").exists(),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const {email, password} =req.body;
+    try {
+      let user = await User.findOne({email});
+      if(!user){
+        return res
+        .status(400)
+        .json({ error: "Please login with correct information" });
+      }
+
+      const passwordCompare = await bcrypt.compare(password, user.password);
+      if(!passwordCompare){
+        return res
+        .status(400)
+        .json({ error: "Please login with correct information" });
+      }
+
+      const data = {
+        user:{
+          id: user.id
+        }
+      }
+      const authToken = jwt.sign(data, JWT_SECRET)
+      res.json({authToken});
+    } catch (error) {
+      console.error(error.message);
+      res.status(500).send("Internal Server error");
+    }
+  })
 
 module.exports = router
