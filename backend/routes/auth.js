@@ -2,6 +2,10 @@ const express = require("express");
 const User = require("../models/User");
 const router = express.Router();
 const { body, validationResult } = require("express-validator");
+var bcrypt = require("bcryptjs");
+var jwt = require('jsonwebtoken');
+
+const JWT_SECRET = 'farishisagoodboy';
 
 //Creating a user using : POST "/api/auth":
 router.post(
@@ -27,12 +31,22 @@ router.post(
           .status(400)
           .json({ error: "Sorry user with this email exists" });
       }
+      // Gensalt bcrypt
+      const salt = await bcrypt.genSalt(10);
+      // Password Hashing with bcrypt
+      const secPass = await bcrypt.hash(req.body.password, salt);
       user = await User.create({
         name: req.body.name,
-        password: req.body.password,
+        password: secPass,
         email: req.body.email,
       });
-      res.json(user);
+      const data = {
+        user:{
+          id: user.id
+        }
+      }
+      const authToken = jwt.sign(data, JWT_SECRET)
+      res.json({authToken});
     } catch (error) {
       console.error(error.message);
       res.status(500).send("some error occured");
@@ -40,4 +54,4 @@ router.post(
   }
 );
 
-module.exports = router;
+module.exports = router
